@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 
 from b2t.config import Settings
 from b2t.i18n import DEFAULT_LANGUAGE, normalize_language
 
-ALL_PROVIDERS = ("whisper", "sensevoice", "volcengine")
+ALL_PROVIDERS = ("whisper", "faster-whisper", "sensevoice", "volcengine")
 ALL_FEATURES = ("web", "server", "window")
+
+
+def _default_markdown_export_dir() -> str:
+    default = Path.home() / "Documents" / "ObsidianDocumentFile" / "Atlas" / "00_Inbox"
+    return os.getenv("B2T_MARKDOWN_DIR", str(default))
 
 
 @dataclass(slots=True)
@@ -34,6 +41,7 @@ class AppConfig:
     enabled_features: list[str] = field(default_factory=lambda: ["window"])
     default_provider: str = "whisper"
     default_model: str = "small"
+    markdown_export_dir: str = field(default_factory=_default_markdown_export_dir)
     sensevoice: SenseVoiceConfig = field(default_factory=SenseVoiceConfig)
     volcengine: VolcengineConfig = field(default_factory=VolcengineConfig)
 
@@ -54,6 +62,7 @@ class AppConfig:
             enabled_features=features,
             default_provider=data.get("default_provider", "whisper"),
             default_model=data.get("default_model", "small"),
+            markdown_export_dir=data.get("markdown_export_dir", _default_markdown_export_dir()),
             sensevoice=SenseVoiceConfig(**data.get("sensevoice", {})),
             volcengine=VolcengineConfig(**data.get("volcengine", {})),
         )

@@ -5,7 +5,7 @@ from pathlib import Path
 from b2t.config import Settings
 from b2t.downloaders import YtDlpDownloader
 from b2t.pipeline import B2TPipeline
-from b2t.transcribers import LocalWhisperTranscriber
+from b2t.transcribers import FasterWhisperTranscriber, LocalWhisperTranscriber
 from b2t.user_config import AppConfig
 
 
@@ -20,7 +20,17 @@ def build_pipeline(
     selected_model = (model or config.default_model).strip()
 
     if selected_provider == "whisper":
-        transcriber = LocalWhisperTranscriber(model=selected_model or "small")
+        transcriber = LocalWhisperTranscriber(
+            model=selected_model or "small",
+            download_root=settings.workspace_root / "models",
+            language=config.language,
+        )
+    elif selected_provider == "faster-whisper":
+        transcriber = FasterWhisperTranscriber(
+            model=selected_model or "small",
+            download_root=settings.workspace_root / "models" / "faster-whisper",
+            language=config.language,
+        )
     elif selected_provider == "sensevoice":
         from b2t.transcribers.sensevoice_local import SenseVoiceSmallTranscriber
 
@@ -50,4 +60,9 @@ def build_pipeline(
         settings=settings,
         downloader=YtDlpDownloader(),
         transcriber=transcriber,
+        markdown_export_dir=(
+            Path(config.markdown_export_dir).expanduser()
+            if config.markdown_export_dir.strip()
+            else None
+        ),
     )

@@ -21,10 +21,12 @@ class B2TPipeline:
         settings: Settings,
         downloader: Downloader,
         transcriber: Transcriber,
+        markdown_export_dir: Path | None = None,
     ) -> None:
         self.settings = settings
         self.downloader = downloader
         self.transcriber = transcriber
+        self.markdown_export_dir = markdown_export_dir
 
     def transcribe(
         self,
@@ -41,9 +43,12 @@ class B2TPipeline:
         downloaded: DownloadResult | None = None
 
         if source.kind == "bilibili":
-            downloaded = self.downloader.download(source, self.settings, progress=progress)
+            downloaded = self.downloader.download_audio(source, self.settings, progress=progress)
+            source_media_path = downloaded.audio_path or downloaded.video_path
+            if source_media_path is None:
+                raise RuntimeError("downloader returned no audio or video file")
             audio_path = self._extract_audio(
-                downloaded.video_path,
+                source_media_path,
                 safe_stem(downloaded.title or source.display_name),
                 progress=progress,
             )
@@ -72,22 +77,38 @@ class B2TPipeline:
         transcript_path.parent.mkdir(parents=True, exist_ok=True)
         transcript_path.write_text(text + "\n", encoding="utf-8")
 
+        download_metadata = downloaded.metadata if downloaded else {}
+        source_url = source.url or (downloaded.webpage_url if downloaded else None)
+        if not source_url and isinstance(download_metadata, dict):
+            source_url = download_metadata.get("webpage_url")
+        source_bv = source.bv
+        if not source_bv and isinstance(download_metadata, dict):
+            source_bv = download_metadata.get("id")
+
         metadata = {
             "source": {
                 "raw_input": source.raw_input,
                 "kind": source.kind,
-                "bv": source.bv,
-                "url": source.url,
+                "bv": source_bv,
+                "url": source_url,
                 "path": str(source.path) if source.path else None,
             },
             "engine": self.transcriber.name,
             "model": transcription.get("model"),
             "audio_path": str(audio_path),
+            "downloaded_audio_path": str(downloaded.audio_path) if downloaded and downloaded.audio_path else None,
             "video_path": str(video_path) if video_path else None,
-            "download": downloaded.metadata if downloaded else None,
+            "download": download_metadata or None,
             "language": transcription.get("language"),
             "generated_at": datetime.now().isoformat(),
         }
+        markdown_path = self._write_markdown_export(
+            base_name=base_name,
+            text=text,
+            metadata=metadata,
+            transcript_path=transcript_path,
+        )
+        metadata["markdown_path"] = str(markdown_path) if markdown_path else None
         metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
         return TranscriptResult(
@@ -99,8 +120,67 @@ class B2TPipeline:
             transcript_path=transcript_path,
             metadata_path=metadata_path,
             video_path=video_path,
+            markdown_path=markdown_path,
             metadata=metadata,
         )
+
+    def _write_markdown_export(
+        self,
+        *,
+        base_name: str,
+        text: str,
+        metadata: dict[str, object],
+        transcript_path: Path,
+    ) -> Path | None:
+        if self.markdown_export_dir is None:
+            return None
+
+        export_dir = self.markdown_export_dir.expanduser()
+        export_dir.mkdir(parents=True, exist_ok=True)
+        markdown_path = export_dir / f"{transcript_path.stem}.md"
+
+        download = metadata.get("download")
+        download_data = download if isinstance(download, dict) else {}
+        title = str(download_data.get("title") or base_name)
+        source_data_raw = metadata.get("source", {})
+        source_data = source_data_raw if isinstance(source_data_raw, dict) else {}
+        download_url = download_data.get("webpage_url")
+        url = source_data.get("url") or download_url or ""
+        url_text = str(url)
+        bv = str(source_data.get("bv") or download_data.get("id") or "")
+        safe_url = url_text.replace(")", "%29")
+        source_link = f"[{bv or '打开视频'}]({safe_url})" if safe_url else "本地文件"
+
+        lines = [
+            "---",
+            f"title: {json.dumps(title, ensure_ascii=False)}",
+            f"source: {json.dumps(url_text, ensure_ascii=False)}",
+            f"bv: {json.dumps(bv, ensure_ascii=False)}",
+            f"engine: {json.dumps(str(metadata.get('engine') or ''), ensure_ascii=False)}",
+            f"model: {json.dumps(str(metadata.get('model') or ''), ensure_ascii=False)}",
+            f"language: {json.dumps(str(metadata.get('language') or ''), ensure_ascii=False)}",
+            f"generated_at: {json.dumps(str(metadata.get('generated_at') or ''), ensure_ascii=False)}",
+            "tags:",
+            "  - bili2text",
+            "  - transcription",
+            "---",
+            "",
+            f"# {title}",
+            "",
+            "> [!info] 转录信息",
+            f"> - 视频源：{source_link}",
+            f"> - BV 号：`{bv}`" if bv else "> - BV 号：无（本地文件）",
+            f"> - 引擎：{metadata.get('engine') or ''}",
+            f"> - 模型：{metadata.get('model') or ''}",
+            f"> - 语言：{metadata.get('language') or ''}",
+            "",
+            "## 转录文本",
+            "",
+            text.rstrip(),
+            "",
+        ]
+        markdown_path.write_text("\n".join(lines), encoding="utf-8")
+        return markdown_path
 
     def _extract_audio(self, video_path: Path, stem: str, progress: ProgressReporter | None = None) -> Path:
         ffmpeg = shutil.which("ffmpeg")

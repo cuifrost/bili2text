@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Lock
 from typing import Callable
@@ -19,7 +20,10 @@ class TaskService:
         self.database = database
         self.library = library
         self.pipeline_factory = pipeline_factory
-        self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="b2t-task")
+        self.executor = ThreadPoolExecutor(
+            max_workers=_default_worker_count(),
+            thread_name_prefix="b2t-task",
+        )
         self._listeners: dict[str, list[ProgressCallback]] = {}
         self._futures: dict[str, Future[object]] = {}
         self._lock = Lock()
@@ -92,3 +96,12 @@ class TaskService:
             callbacks = list(self._listeners.get(snapshot.task_id, []))
         for callback in callbacks:
             callback(snapshot)
+
+
+def _default_worker_count() -> int:
+    """Keep one transcription on the GPU by default; allow explicit tuning."""
+    raw_value = os.getenv("B2T_MAX_WORKERS", "1").strip()
+    try:
+        return max(1, int(raw_value))
+    except ValueError:
+        return 1

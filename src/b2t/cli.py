@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -81,6 +82,9 @@ def create_app(language: str = DEFAULT_LANGUAGE) -> typer.Typer:
             raise typer.Exit(code=1) from exc
 
         typer.echo(tr(config.language, "transcript_saved", path=transcript["file_path"]))
+        metadata_data = json.loads(Path(video["metadata_path"]).read_text(encoding="utf-8"))
+        if metadata_data.get("markdown_path"):
+            typer.echo(tr(config.language, "markdown_saved", path=metadata_data["markdown_path"]))
         typer.echo(tr(config.language, "metadata_saved", path=video["metadata_path"]))
 
     @app.command("batch", help=tr(language, "cmd_batch_help"))
@@ -168,6 +172,13 @@ def create_app(language: str = DEFAULT_LANGUAGE) -> typer.Typer:
             rows.append((tr(selected_language, "doctor_whisper"), tr(selected_language, "status_missing")))
         else:
             rows.append((tr(selected_language, "doctor_whisper"), tr(selected_language, "status_ok")))
+
+        try:
+            import faster_whisper  # noqa: F401
+        except ImportError:
+            rows.append((tr(selected_language, "doctor_faster_whisper"), tr(selected_language, "status_missing")))
+        else:
+            rows.append((tr(selected_language, "doctor_faster_whisper"), tr(selected_language, "status_ok")))
 
         try:
             import funasr_onnx  # noqa: F401

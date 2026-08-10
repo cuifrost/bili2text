@@ -177,3 +177,13 @@ outputs/
 # Executable files
 *.exe
 .b2t/
+
+# Local runtime data: downloaded media, models, databases, transcripts and caches
+runtime-workspace/
+probe-workspace/
+probe-workspace-*/
+.pytest-*/
+.uv-cache/
+
+# Local credentials used by yt-dlp for authenticated Bilibili access
+cookies.txt

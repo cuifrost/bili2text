@@ -18,7 +18,8 @@ class FakeDownloader(Downloader):
             source=source,
             video_path=self.video_path,
             title="demo-title",
-            metadata={"title": "demo-title"},
+            webpage_url="https://www.bilibili.com/video/BV1xx411c7XD",
+            metadata={"title": "demo-title", "id": "BV1xx411c7XD"},
         )
 
 
@@ -61,6 +62,27 @@ def test_pipeline_transcribes_bilibili_source(tmp_path: Path) -> None:
     assert result.video_path == video_path
 
 
+def test_pipeline_markdown_contains_clickable_bilibili_source(tmp_path: Path) -> None:
+    settings = Settings.from_workspace(tmp_path / ".b2t")
+    settings.ensure_directories()
+    video_path = tmp_path / "video.mp4"
+    video_path.write_bytes(b"video")
+    markdown_dir = tmp_path / "obsidian-inbox"
+
+    pipeline = PipelineUnderTest(
+        settings=settings,
+        downloader=FakeDownloader(video_path),
+        transcriber=FakeTranscriber(),
+        markdown_export_dir=markdown_dir,
+    )
+
+    result = pipeline.transcribe("https://www.bilibili.com/video/BV1xx411c7XD")
+    content = result.markdown_path.read_text(encoding="utf-8")
+
+    assert "[BV1xx411c7XD](https://www.bilibili.com/video/BV1xx411c7XD)" in content
+    assert "bv: \"BV1xx411c7XD\"" in content
+
+
 def test_pipeline_respects_custom_output_file(tmp_path: Path) -> None:
     settings = Settings.from_workspace(tmp_path / ".b2t")
     settings.ensure_directories()
@@ -77,6 +99,29 @@ def test_pipeline_respects_custom_output_file(tmp_path: Path) -> None:
     result = pipeline.transcribe(str(audio_path), output=output_path)
     assert result.transcript_path == output_path.with_suffix(".txt")
     assert result.transcript_path.exists()
+
+
+def test_pipeline_exports_obsidian_markdown(tmp_path: Path) -> None:
+    settings = Settings.from_workspace(tmp_path / ".b2t")
+    settings.ensure_directories()
+    audio_path = tmp_path / "input.wav"
+    audio_path.write_bytes(b"wav")
+    markdown_dir = tmp_path / "obsidian-inbox"
+
+    pipeline = PipelineUnderTest(
+        settings=settings,
+        downloader=FakeDownloader(tmp_path / "unused.mp4"),
+        transcriber=FakeTranscriber(),
+        markdown_export_dir=markdown_dir,
+    )
+
+    result = pipeline.transcribe(str(audio_path))
+    assert result.markdown_path == markdown_dir / f"{result.transcript_path.stem}.md"
+    content = result.markdown_path.read_text(encoding="utf-8")
+    assert content.startswith("---\n")
+    assert "# input" in content
+    assert "## 转录文本" in content
+    assert "hello from b2t" in content
 
 
 def test_parse_ffmpeg_progress_seconds_supports_us_and_ms() -> None:

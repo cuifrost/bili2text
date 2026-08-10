@@ -29,6 +29,7 @@ There's also a simple web UI and a desktop window for anyone who'd rather not us
 | Engine | Type | Notes |
 | --- | --- | --- |
 | **Whisper** | Local model | OpenAI's open-source speech recognition model. Runs offline, general-purpose |
+| **faster-whisper** | Local model | CTranslate2-accelerated backend with automatic CUDA detection for faster daily transcription |
 | **SenseVoice** | Local model | ONNX-based local model with strong Chinese recognition |
 | **Volcengine** | Cloud API | ByteDance's commercial ASR service, good for batch or service-oriented workloads |
 
@@ -44,13 +45,13 @@ cd bili2text
 uv sync
 ```
 
-This only installs core dependencies. Transcription engines and extra features are installed via extras — for example, to use Whisper and the web UI:
+This only installs core dependencies. Transcription engines and extra features are installed via extras — for daily use with faster-whisper and the web UI:
 
 ```bash
-uv sync --extra whisper --extra web
+uv sync --extra faster-whisper --extra web
 ```
 
-Available extras: `whisper`, `sensevoice`, `volcengine`, `web`, `server`.
+Available extras: `whisper`, `faster-whisper`, `sensevoice`, `volcengine`, `web`, `server`. faster-whisper detects CUDA automatically and falls back to CPU when no GPU is available.
 
 ### Set Up
 
@@ -77,8 +78,10 @@ uv run bili2text tx ./my-video.mp4
 Specify an engine and model:
 
 ```bash
-uv run bili2text tx "BV1kfDTBXEfu" --provider whisper --model medium
+uv run bili2text tx "BV1kfDTBXEfu" --provider faster-whisper --model small
 ```
+
+`small` is the recommended balance for speed and Chinese accuracy. Tasks run one at a time by default to avoid GPU contention; set `B2T_MAX_WORKERS` if you need a different concurrency level.
 
 Submit multiple inputs in one batch:
 

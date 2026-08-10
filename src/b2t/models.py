@@ -24,7 +24,8 @@ class SourceRef:
 @dataclass(slots=True)
 class DownloadResult:
     source: SourceRef
-    video_path: Path
+    video_path: Path | None = None
+    audio_path: Path | None = None
     title: str | None = None
     webpage_url: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -40,6 +41,7 @@ class TranscriptResult:
     transcript_path: Path
     metadata_path: Path
     video_path: Path | None = None
+    markdown_path: Path | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

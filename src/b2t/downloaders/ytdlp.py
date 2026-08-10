@@ -74,16 +74,75 @@ class YtDlpDownloader(Downloader):
             },
         )
 
-    def _build_ydl_opts(self, source: SourceRef, settings: Settings) -> dict[str, Any]:
+    def download_audio(
+        self,
+        source: SourceRef,
+        settings: Settings,
+        *,
+        progress=None,
+    ) -> DownloadResult:
+        if source.kind != "bilibili":
+            raise ValueError("yt-dlp downloader only supports bilibili sources")
+
+        settings.ensure_directories()
+        try:
+            from yt_dlp import YoutubeDL
+        except ImportError as exc:
+            raise RuntimeError(
+                "yt-dlp is not installed. Run `uv sync` to install the core dependencies."
+            ) from exc
+
+        ydl_opts = self._build_ydl_opts(source, settings, audio_only=True)
+        if progress is not None:
+            ydl_opts["progress_hooks"] = [_build_progress_hook(progress)]
+            ydl_opts["noprogress"] = False
+
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(source.url or f"https://www.bilibili.com/video/{source.bv}", download=True)
+            if "entries" in info and info["entries"]:
+                info = info["entries"][0]
+            info = ydl.sanitize_info(info)
+            audio_path = self._resolve_video_path(ydl, info)
+            if not audio_path.exists():
+                raise RuntimeError(f"yt-dlp reported success but no audio file was found at {audio_path}")
+
+        webpage_url = info.get("webpage_url") or source.url
+        return DownloadResult(
+            source=source,
+            video_path=None,
+            audio_path=audio_path,
+            title=info.get("title"),
+            webpage_url=webpage_url,
+            metadata={
+                "title": info.get("title"),
+                "uploader": info.get("uploader"),
+                "duration": info.get("duration"),
+                "id": info.get("id"),
+                "webpage_url": webpage_url,
+                "media_type": "audio",
+            },
+        )
+
+    def _build_ydl_opts(
+        self,
+        source: SourceRef,
+        settings: Settings,
+        *,
+        audio_only: bool = False,
+    ) -> dict[str, Any]:
         ydl_opts: dict[str, Any] = {
-            "format": "bv*+ba/b",
-            "merge_output_format": "mp4",
+            "format": "bestaudio/best" if audio_only else "bv*+ba/b",
             "noplaylist": True,
-            "outtmpl": str(settings.downloads_dir / "%(id)s.%(ext)s"),
+            "outtmpl": str(
+                (settings.audio_downloads_dir if audio_only else settings.downloads_dir)
+                / "%(id)s.%(ext)s"
+            ),
             "noprogress": True,
             "quiet": True,
             "no_warnings": True,
         }
+        if not audio_only:
+            ydl_opts["merge_output_format"] = "mp4"
 
         # Support cookies for authenticated access to Bilibili.
         # Priority: B2T_COOKIE_FILE env var > cookies.txt in workspace.
@@ -105,7 +164,8 @@ class YtDlpDownloader(Downloader):
         if source.page is not None:
             ydl_opts["playlist_items"] = str(source.page)
             ydl_opts["noplaylist"] = False
-            ydl_opts["outtmpl"] = str(settings.downloads_dir / "%(id)s.%(playlist_index)02d.%(ext)s")
+            output_dir = settings.audio_downloads_dir if audio_only else settings.downloads_dir
+            ydl_opts["outtmpl"] = str(output_dir / "%(id)s.%(playlist_index)02d.%(ext)s")
         return ydl_opts
 
     def _resolve_video_path(self, ydl: Any, info: dict[str, Any]) -> Path:
@@ -124,3 +184,22 @@ class YtDlpDownloader(Downloader):
             return merged_mp4
 
         return prepared
+
+
+def _build_progress_hook(progress):
+    def progress_hook(data: dict[str, Any]) -> None:
+        status = data.get("status")
+        if status == "downloading":
+            total = data.get("total_bytes") or data.get("total_bytes_estimate") or 0
+            downloaded = data.get("downloaded_bytes") or 0
+            stage_progress = (downloaded / total) if total else None
+            progress.running(
+                "downloading",
+                message="downloading",
+                stage_progress=stage_progress,
+                indeterminate=stage_progress is None,
+            )
+        elif status == "finished":
+            progress.running("downloading", message="download_finished", stage_progress=1.0)
+
+    return progress_hook

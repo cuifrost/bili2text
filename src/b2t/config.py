@@ -12,6 +12,7 @@ DEFAULT_WORKSPACE_NAME = ".b2t"
 class Settings:
     workspace_root: Path
     downloads_dir: Path
+    audio_downloads_dir: Path
     audio_dir: Path
     transcripts_dir: Path
     transcripts_original_dir: Path
@@ -27,6 +28,7 @@ class Settings:
         return cls(
             workspace_root=root,
             downloads_dir=root / "downloads",
+            audio_downloads_dir=root / "audio-downloads",
             audio_dir=root / "audio",
             transcripts_dir=root / "transcripts",
             transcripts_original_dir=root / "transcripts" / "original",
@@ -41,6 +43,7 @@ class Settings:
         for directory in (
             self.workspace_root,
             self.downloads_dir,
+            self.audio_downloads_dir,
             self.audio_dir,
             self.transcripts_dir,
             self.transcripts_original_dir,

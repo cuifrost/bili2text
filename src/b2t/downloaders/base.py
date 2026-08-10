@@ -19,3 +19,13 @@ class Downloader(ABC):
         progress: ProgressReporter | None = None,
     ) -> DownloadResult:
         raise NotImplementedError
+
+    def download_audio(
+        self,
+        source: SourceRef,
+        settings: Settings,
+        *,
+        progress: ProgressReporter | None = None,
+    ) -> DownloadResult:
+        """Download a source for transcription, falling back to video download."""
+        return self.download(source, settings, progress=progress)

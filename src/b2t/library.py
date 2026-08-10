@@ -31,7 +31,7 @@ class WorkspaceLibrary:
             source_input=result.source.raw_input,
             source_url=result.source.url,
             source_bv=result.source.bv,
-            title=result.metadata.get("download", {}).get("title") or result.source.display_name,
+            title=(result.metadata.get("download") or {}).get("title") or result.source.display_name,
             display_name=result.source.display_name,
             language=result.metadata.get("language"),
             engine=result.engine,
@@ -149,6 +149,7 @@ class WorkspaceLibrary:
             "audio_path": str(result.audio_path),
             "video_path": str(result.video_path) if result.video_path else None,
             "transcript_path": str(transcript_path),
+            "markdown_path": str(result.markdown_path) if result.markdown_path else None,
         }
         target.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
         return target

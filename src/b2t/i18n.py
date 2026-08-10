@@ -25,7 +25,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "cmd_language_help": "切换界面语言（缩写: lang）。",
         "arg_source_help": "BV 号、Bilibili 链接或本地文件路径。",
         "arg_sources_help": "一条或多条输入；也可以用 --file 读取每行一个输入。",
-        "opt_provider_help": "转写引擎: whisper / sensevoice / volcengine。",
+        "opt_provider_help": "转写引擎: whisper / faster-whisper / sensevoice / volcengine。",
         "opt_model_help": "模型名称。",
         "opt_prompt_help": "转写提示词（可选）。",
         "opt_output_help": "输出文件或目录。",
@@ -39,6 +39,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "missing_dependency": "缺少依赖 '{name}'。{guidance}",
         "dependency_sync_guidance": "请把所有需要的 extras 写在同一条命令里，例如 `uv sync --extra whisper --extra web`；如果之前跑过 Bootstrap，直接 `uv run bili2text bootstrap --sync-only` 也行。",
         "transcript_saved": "转写结果已保存: {path}",
+        "markdown_saved": "Markdown 已保存: {path}",
         "metadata_saved": "元数据已保存: {path}",
         "error_prefix": "出错了: {message}",
         "task_submitted": "任务已创建: {task_id}",
@@ -50,10 +51,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "doctor_yt_dlp": "yt-dlp",
         "doctor_ffmpeg": "ffmpeg",
         "doctor_whisper": "whisper",
+        "doctor_faster_whisper": "faster-whisper",
         "doctor_sensevoice": "funasr-onnx",
         "doctor_requests": "requests",
-        "status_ok": "✓ 可用",
-        "status_missing": "✗ 缺失",
+        "status_ok": "可用",
+        "status_missing": "缺失",
 
         # ── Bootstrap ────────────────────────────────────────
         "bootstrap_title": "bili2text 初始化向导",
@@ -111,6 +113,7 @@ MESSAGES: dict[str, dict[str, str]] = {
 
         # ── Provider short descriptions (for select menu) ────
         "provider_whisper_short": "本地离线，不依赖云服务",
+        "provider_faster_whisper_short": "本地离线，CPU 更快更省内存",
         "provider_sensevoice_short": "本地 ONNX 模型，中文效果好",
         "provider_volcengine_short": "火山引擎云端识别，需要凭据",
         "feature_web_short": "浏览器界面，在网页上操作",
@@ -119,6 +122,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         # ── Provider full descriptions ───────────────────────
         "provider_whisper_name": "Whisper 本地模型",
         "provider_whisper_desc": "完全离线运行，不需要联网。需要本机有 Whisper 环境。",
+        "provider_faster_whisper_name": "faster-whisper 本地模型",
+        "provider_faster_whisper_desc": "Whisper 的高效本地运行时，适合 CPU 和长音频；准确率取决于所选模型。",
         "provider_sensevoice_name": "SenseVoice 本地模型",
         "provider_sensevoice_desc": "基于 ONNX 的本地模型，中文识别效果不错。需要模型文件和对应依赖。",
         "provider_volcengine_name": "火山引擎云端识别",
@@ -215,7 +220,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "cmd_language_help": "Switch the interface language (alias: lang).",
         "arg_source_help": "BV id, Bilibili URL, or a local media file.",
         "arg_sources_help": "One or more inputs; use --file to read one input per line.",
-        "opt_provider_help": "Transcription engine: whisper / sensevoice / volcengine.",
+        "opt_provider_help": "Transcription engine: whisper / faster-whisper / sensevoice / volcengine.",
         "opt_model_help": "Model name.",
         "opt_prompt_help": "Optional transcription prompt.",
         "opt_output_help": "Output file or directory.",
@@ -229,6 +234,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "missing_dependency": "Missing dependency '{name}'. {guidance}",
         "dependency_sync_guidance": "Put all the extras you need in one command, e.g. `uv sync --extra whisper --extra web`. Or just run `uv run bili2text bootstrap --sync-only` if you've already been through the setup.",
         "transcript_saved": "Transcript saved: {path}",
+        "markdown_saved": "Markdown saved: {path}",
         "metadata_saved": "Metadata saved: {path}",
         "error_prefix": "Error: {message}",
         "task_submitted": "Task created: {task_id}",
@@ -240,10 +246,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "doctor_yt_dlp": "yt-dlp",
         "doctor_ffmpeg": "ffmpeg",
         "doctor_whisper": "whisper",
+        "doctor_faster_whisper": "faster-whisper",
         "doctor_sensevoice": "funasr-onnx",
         "doctor_requests": "requests",
-        "status_ok": "✓ ok",
-        "status_missing": "✗ missing",
+        "status_ok": "ok",
+        "status_missing": "missing",
 
         # ── Bootstrap ────────────────────────────────────────
         "bootstrap_title": "bili2text setup",
@@ -301,6 +308,7 @@ MESSAGES: dict[str, dict[str, str]] = {
 
         # ── Provider short descriptions (for select menu) ────
         "provider_whisper_short": "Runs locally, no cloud needed",
+        "provider_faster_whisper_short": "Runs locally, faster and lighter on CPU",
         "provider_sensevoice_short": "Local ONNX model, great for Chinese",
         "provider_volcengine_short": "Volcengine cloud ASR, needs credentials",
         "feature_web_short": "Web interface — use in your browser",
@@ -309,6 +317,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         # ── Provider full descriptions ───────────────────────
         "provider_whisper_name": "Whisper (local)",
         "provider_whisper_desc": "Runs entirely offline — no internet required. You'll need a local Whisper setup.",
+        "provider_faster_whisper_name": "faster-whisper (local)",
+        "provider_faster_whisper_desc": "An efficient local Whisper runtime for CPU and long audio; accuracy depends on the model.",
         "provider_sensevoice_name": "SenseVoice (local)",
         "provider_sensevoice_desc": "ONNX-based local model with strong Chinese recognition. Needs the model files and dependencies.",
         "provider_volcengine_name": "Volcengine (cloud)",

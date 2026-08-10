@@ -23,3 +23,7 @@ def test_app_config_round_trip(tmp_path: Path) -> None:
     assert loaded.default_model == "C:/models/sensevoice-small"
     assert loaded.sensevoice.model_dir == "C:/models/sensevoice-small"
     assert loaded.volcengine.api_key == "secret"
+
+
+def test_new_app_config_prioritizes_quality_model() -> None:
+    assert AppConfig().default_model == "small"

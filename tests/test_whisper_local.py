@@ -2,6 +2,8 @@ from b2t.progress import ProgressReporter
 from b2t.transcribers.whisper_local import (
     WhisperProgressTqdm,
     build_whisper_import_error_message,
+    collapse_repeated_phrases,
+    normalize_whisper_language,
 )
 
 
@@ -34,3 +36,21 @@ def test_whisper_progress_tqdm_reports_fractional_progress() -> None:
 
     assert events[-1].stage == "transcribing"
     assert round(events[-1].percent, 3) == 0.725
+
+
+def test_normalize_whisper_language_maps_app_locale() -> None:
+    assert normalize_whisper_language("zh-CN") == "zh"
+    assert normalize_whisper_language("en-US") == "en"
+    assert normalize_whisper_language(None) is None
+
+
+def test_collapse_repeated_phrases_removes_decoder_loop() -> None:
+    text = "你这不错你这不错你这不错你故意抛异常"
+
+    assert collapse_repeated_phrases(text) == "你这不错你故意抛异常"
+
+
+def test_collapse_repeated_phrases_keeps_two_natural_repetitions() -> None:
+    text = "真的真的这个方法可以"
+
+    assert collapse_repeated_phrases(text) == text

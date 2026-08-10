@@ -34,6 +34,7 @@
 | 引擎 | 类型 | 说明 |
 | --- | --- | --- |
 | **Whisper** | 本地模型 | OpenAI 开源的语音识别模型，离线运行，通用性强 |
+| **faster-whisper** | 本地模型 | CTranslate2 加速版，自动使用 CUDA，适合日常快速转写 |
 | **SenseVoice** | 本地模型 | 阿里云开源本地语音识别模型，中文识别效果好 |
 | **火山引擎** | 云端 API | 字节跳动旗下的商用语音识别服务，识别很准很推荐 |
 
@@ -51,13 +52,13 @@ cd bili2text
 uv sync
 ```
 
-这只会安装核心依赖。转写引擎和额外功能需要通过 extras 安装，比如要用 Whisper 和 Web 界面：
+这只会安装核心依赖。转写引擎和额外功能需要通过 extras 安装，比如日常使用 faster-whisper 和 Web 界面：
 
 ```bash
-uv sync --extra whisper --extra web
+uv sync --extra faster-whisper --extra web
 ```
 
-可选的 extras：`whisper`、`sensevoice`、`volcengine`、`web`、`server`。可以暂时不用安装，详看下方的初始化文档。
+可选的 extras：`whisper`、`faster-whisper`、`sensevoice`、`volcengine`、`web`、`server`。日常使用推荐安装 `faster-whisper`；它会自动检测 CUDA，没有可用 GPU 时回退到 CPU。
 
 ### 初始化配置
 
@@ -84,8 +85,10 @@ uv run bili2text tx ./my-video.mp4
 指定引擎和模型：
 
 ```bash
-uv run bili2text tx "BV1kfDTBXEfu" --provider whisper --model medium
+uv run bili2text tx "BV1kfDTBXEfu" --provider faster-whisper --model small
 ```
+
+`small` 是速度和中文识别质量的平衡选择。任务默认单路执行，避免多个模型同时抢占同一块显卡；如需调整并发数，可设置 `B2T_MAX_WORKERS`。
 
 批量提交多条输入：
 
