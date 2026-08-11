@@ -240,7 +240,17 @@ class BailianFileTranscriber(Transcriber):
     ) -> dict[str, Any]:
         deadline = time.monotonic() + self.poll_timeout_seconds
         while time.monotonic() < deadline:
-            response = self._request(session, "get", self._api_url(f"/tasks/{task_id}"), timeout=60)
+            response = self._request(
+                session,
+                "get",
+                self._api_url(f"/tasks/{task_id}"),
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "X-DashScope-Async": "enable",
+                },
+                timeout=60,
+            )
             data = _response_json(response, "Bailian task polling failed")
             output = data.get("output") or {}
             status = str(output.get("task_status") or output.get("status") or data.get("task_status") or "").upper()

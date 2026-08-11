@@ -116,6 +116,8 @@ def test_bailian_filetrans_uploads_polls_and_parses_result(tmp_path, monkeypatch
     assert session.post_calls[0]["json"]["model"] == "qwen3-asr-flash-filetrans"
     assert session.post_calls[0]["json"]["parameters"]["enable_itn"] is False
     assert session.post_calls[0]["json"]["parameters"]["enable_words"] is True
+    assert session.get_calls[0]["headers"]["Authorization"] == "Bearer dashscope-key"
+    assert session.get_calls[0]["headers"]["X-DashScope-Async"] == "enable"
     assert len(oss_client.uploader_instance.calls) == 1
     assert len(oss_client.deleted) == 1
 
