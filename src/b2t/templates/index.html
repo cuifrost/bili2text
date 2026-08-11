@@ -26,8 +26,10 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <select name="provider" class="rounded border px-3 py-2">
             <option value="whisper" {% if values.provider == "whisper" %}selected{% endif %}>whisper</option>
+            <option value="faster-whisper" {% if values.provider == "faster-whisper" %}selected{% endif %}>faster-whisper</option>
             <option value="sensevoice" {% if values.provider == "sensevoice" %}selected{% endif %}>sensevoice</option>
             <option value="volcengine" {% if values.provider == "volcengine" %}selected{% endif %}>volcengine</option>
+            <option value="bailian" {% if values.provider == "bailian" %}selected{% endif %}>bailian-filetrans</option>
           </select>
           <input name="model" value="{{ values.model }}" class="rounded border px-3 py-2">
         </div>

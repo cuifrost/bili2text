@@ -58,7 +58,7 @@ uv sync
 uv sync --extra faster-whisper --extra web
 ```
 
-可选的 extras：`whisper`、`faster-whisper`、`sensevoice`、`volcengine`、`web`、`server`。日常使用推荐安装 `faster-whisper`；它会自动检测 CUDA，没有可用 GPU 时回退到 CPU。
+可选的 extras：`whisper`、`faster-whisper`、`sensevoice`、`volcengine`、`bailian`、`web`、`server`。日常使用推荐安装 `faster-whisper`；云服务器可以安装 `bailian`，直接调用阿里云百炼完成长音频转写。
 
 ### 初始化配置
 
@@ -89,6 +89,45 @@ uv run bili2text tx "BV1kfDTBXEfu" --provider faster-whisper --model small
 ```
 
 `small` 是速度和中文识别质量的平衡选择。任务默认单路执行，避免多个模型同时抢占同一块显卡；如需调整并发数，可设置 `B2T_MAX_WORKERS`。
+
+### 阿里云百炼云端转写
+
+云服务器可以使用百炼异步文件转写，不需要本地 GPU。程序会先把音频上传到 OSS，再提交 `qwen3-asr-flash-filetrans` 任务，完成后自动下载结果并删除临时音频。
+
+安装依赖：
+
+```bash
+uv sync --extra bailian
+```
+
+推荐使用环境变量保存凭据：
+
+仓库中的 `bailian.env.example` 可以作为云服务器环境变量模板。
+
+```bash
+export DASHSCOPE_API_KEY="你的百炼 API Key"
+export DASHSCOPE_WORKSPACE_ID="你的 Workspace ID"
+export OSS_ACCESS_KEY_ID="你的 OSS AccessKey ID"
+export OSS_ACCESS_KEY_SECRET="你的 OSS AccessKey Secret"
+export OSS_BUCKET="你的 OSS Bucket"
+export OSS_REGION="cn-beijing"
+```
+
+云服务器上可以把这些值放进一个只对当前用户可读的环境文件，然后一次性加载：
+
+```bash
+cp bailian.env.example bailian.env
+chmod 600 bailian.env
+set -a; source bailian.env; set +a
+```
+
+然后直接转写：
+
+```bash
+uv run bili2text tx "BV1kfDTBXEfu" --provider bailian --model qwen3-asr-flash-filetrans
+```
+
+百炼文件转写要求音频 URL 可被公网访问，因此 OSS Bucket 不应只提供本地路径；程序会生成临时签名 URL。API Key 和 OSS 密钥不要提交到 Git 仓库。
 
 批量提交多条输入：
 

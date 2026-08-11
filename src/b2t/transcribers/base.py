@@ -9,6 +9,7 @@ from b2t.progress import ProgressReporter
 
 class Transcriber(ABC):
     name = "transcriber"
+    accepts_original_audio = False
 
     @abstractmethod
     def transcribe(

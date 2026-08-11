@@ -47,11 +47,14 @@ class B2TPipeline:
             source_media_path = downloaded.audio_path or downloaded.video_path
             if source_media_path is None:
                 raise RuntimeError("downloader returned no audio or video file")
-            audio_path = self._extract_audio(
-                source_media_path,
-                safe_stem(downloaded.title or source.display_name),
-                progress=progress,
-            )
+            if downloaded.audio_path and self.transcriber.accepts_original_audio:
+                audio_path = downloaded.audio_path
+            else:
+                audio_path = self._extract_audio(
+                    source_media_path,
+                    safe_stem(downloaded.title or source.display_name),
+                    progress=progress,
+                )
             base_name = downloaded.title or source.display_name
             video_path = downloaded.video_path
         elif source.kind == "video":
@@ -102,6 +105,9 @@ class B2TPipeline:
             "language": transcription.get("language"),
             "generated_at": datetime.now().isoformat(),
         }
+        provider_metadata = transcription.get("metadata")
+        if isinstance(provider_metadata, dict):
+            metadata["transcription"] = provider_metadata
         markdown_path = self._write_markdown_export(
             base_name=base_name,
             text=text,

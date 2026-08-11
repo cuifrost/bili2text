@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -169,6 +170,11 @@ def run_bootstrap(*, settings: Settings, interactive: bool = True) -> AppConfig:
             "value": "volcengine",
             "enabled": "volcengine" in config.enabled_providers,
         },
+        {
+            "name": f"bailian — {tr(lang, 'provider_bailian_short')}",
+            "value": "bailian",
+            "enabled": "bailian" in config.enabled_providers,
+        },
     ]
     selected_providers: list[str] = inquirer.checkbox(
         message=tr(lang, "bootstrap_providers_prompt"),
@@ -217,6 +223,8 @@ def run_bootstrap(*, settings: Settings, interactive: bool = True) -> AppConfig:
             _configure_sensevoice(config, lang)
         elif provider == "volcengine":
             _configure_volcengine(config, lang)
+        elif provider == "bailian":
+            _configure_bailian(config, lang)
 
     # ── 5. Pick default provider ─────────────────────────────
     console.print()
@@ -327,6 +335,42 @@ def _configure_volcengine(config: AppConfig, lang: str) -> None:
         message=tr(lang, "bootstrap_volc_itn_prompt"),
         default=config.volcengine.use_itn,
     ).execute()
+
+
+def _configure_bailian(config: AppConfig, lang: str) -> None:
+    bailian = config.bailian
+    bailian.api_key = inquirer.secret(
+        message=tr(lang, "bootstrap_bailian_api_key_prompt"),
+        default=bailian.api_key or os.getenv("DASHSCOPE_API_KEY", ""),
+    ).execute().strip()
+    bailian.workspace_id = inquirer.text(
+        message=tr(lang, "bootstrap_bailian_workspace_prompt"),
+        default=bailian.workspace_id or os.getenv("DASHSCOPE_WORKSPACE_ID", ""),
+    ).execute().strip()
+    bailian.region = inquirer.text(
+        message=tr(lang, "bootstrap_bailian_region_prompt"),
+        default=bailian.region or os.getenv("DASHSCOPE_REGION", "cn-beijing"),
+    ).execute().strip()
+    bailian.model_name = inquirer.text(
+        message=tr(lang, "bootstrap_bailian_model_prompt"),
+        default=bailian.model_name or "qwen3-asr-flash-filetrans",
+    ).execute().strip()
+    bailian.oss_region = inquirer.text(
+        message=tr(lang, "bootstrap_bailian_oss_region_prompt"),
+        default=bailian.oss_region or os.getenv("OSS_REGION", bailian.region),
+    ).execute().strip()
+    bailian.oss_bucket = inquirer.text(
+        message=tr(lang, "bootstrap_bailian_oss_bucket_prompt"),
+        default=bailian.oss_bucket or os.getenv("OSS_BUCKET", ""),
+    ).execute().strip()
+    bailian.oss_endpoint = inquirer.text(
+        message=tr(lang, "bootstrap_bailian_oss_endpoint_prompt"),
+        default=bailian.oss_endpoint or os.getenv("OSS_ENDPOINT", ""),
+    ).execute().strip()
+    bailian.oss_prefix = inquirer.text(
+        message=tr(lang, "bootstrap_bailian_oss_prefix_prompt"),
+        default=bailian.oss_prefix or "bili2text/audio",
+    ).execute().strip()
 
 
 def _show_next_steps(

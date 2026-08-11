@@ -194,6 +194,13 @@ def create_app(language: str = DEFAULT_LANGUAGE) -> typer.Typer:
         else:
             rows.append((tr(selected_language, "doctor_requests"), tr(selected_language, "status_ok")))
 
+        try:
+            import alibabacloud_oss_v2  # noqa: F401
+        except ImportError:
+            rows.append((tr(selected_language, "doctor_bailian"), tr(selected_language, "status_missing")))
+        else:
+            rows.append((tr(selected_language, "doctor_bailian"), tr(selected_language, "status_ok")))
+
         for label, status in rows:
             typer.echo(f"{label}: {status}")
 

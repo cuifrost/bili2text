@@ -5,7 +5,7 @@ from pathlib import Path
 from b2t.config import Settings
 from b2t.downloaders import YtDlpDownloader
 from b2t.pipeline import B2TPipeline
-from b2t.transcribers import FasterWhisperTranscriber, LocalWhisperTranscriber
+from b2t.transcribers import BailianFileTranscriber, FasterWhisperTranscriber, LocalWhisperTranscriber
 from b2t.user_config import AppConfig
 
 
@@ -52,6 +52,24 @@ def build_pipeline(
             resource_id=config.volcengine.resource_id,
             model_name=selected_model or config.volcengine.model_name,
             use_itn=config.volcengine.use_itn,
+        )
+    elif selected_provider == "bailian":
+        transcriber = BailianFileTranscriber(
+            api_key=config.bailian.api_key,
+            workspace_id=config.bailian.workspace_id,
+            region=config.bailian.region,
+            model_name=selected_model or config.bailian.model_name,
+            language=config.language,
+            oss_region=config.bailian.oss_region,
+            oss_bucket=config.bailian.oss_bucket,
+            oss_endpoint=config.bailian.oss_endpoint,
+            oss_prefix=config.bailian.oss_prefix,
+            oss_url_expire_seconds=config.bailian.oss_url_expire_seconds,
+            poll_interval_seconds=config.bailian.poll_interval_seconds,
+            poll_timeout_seconds=config.bailian.poll_timeout_seconds,
+            cleanup_uploaded_audio=config.bailian.cleanup_uploaded_audio,
+            enable_itn=config.bailian.enable_itn,
+            enable_words=config.bailian.enable_words,
         )
     else:
         raise RuntimeError(f"Unsupported provider: {selected_provider}")

@@ -8,7 +8,7 @@ from pathlib import Path
 from b2t.config import Settings
 from b2t.i18n import DEFAULT_LANGUAGE, normalize_language
 
-ALL_PROVIDERS = ("whisper", "faster-whisper", "sensevoice", "volcengine")
+ALL_PROVIDERS = ("whisper", "faster-whisper", "sensevoice", "volcengine", "bailian")
 ALL_FEATURES = ("web", "server", "window")
 
 
@@ -35,6 +35,24 @@ class VolcengineConfig:
 
 
 @dataclass(slots=True)
+class BailianConfig:
+    api_key: str = ""
+    workspace_id: str = ""
+    region: str = "cn-beijing"
+    model_name: str = "qwen3-asr-flash-filetrans"
+    oss_region: str = "cn-beijing"
+    oss_bucket: str = ""
+    oss_endpoint: str = ""
+    oss_prefix: str = "bili2text/audio"
+    oss_url_expire_seconds: int = 86400
+    poll_interval_seconds: float = 3.0
+    poll_timeout_seconds: int = 7200
+    cleanup_uploaded_audio: bool = True
+    enable_itn: bool = False
+    enable_words: bool = True
+
+
+@dataclass(slots=True)
 class AppConfig:
     language: str = DEFAULT_LANGUAGE
     enabled_providers: list[str] = field(default_factory=lambda: ["whisper"])
@@ -44,6 +62,7 @@ class AppConfig:
     markdown_export_dir: str = field(default_factory=_default_markdown_export_dir)
     sensevoice: SenseVoiceConfig = field(default_factory=SenseVoiceConfig)
     volcengine: VolcengineConfig = field(default_factory=VolcengineConfig)
+    bailian: BailianConfig = field(default_factory=BailianConfig)
 
     @classmethod
     def load(cls, settings: Settings) -> "AppConfig":
@@ -65,6 +84,7 @@ class AppConfig:
             markdown_export_dir=data.get("markdown_export_dir", _default_markdown_export_dir()),
             sensevoice=SenseVoiceConfig(**data.get("sensevoice", {})),
             volcengine=VolcengineConfig(**data.get("volcengine", {})),
+            bailian=BailianConfig(**data.get("bailian", {})),
         )
 
     def save(self, settings: Settings) -> None:

@@ -187,3 +187,6 @@ probe-workspace-*/
 
 # Local credentials used by yt-dlp for authenticated Bilibili access
 cookies.txt
+
+# Local Alibaba Cloud Bailian / OSS credentials
+bailian.env

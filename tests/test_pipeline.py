@@ -23,6 +23,22 @@ class FakeDownloader(Downloader):
         )
 
 
+class FakeAudioDownloader(FakeDownloader):
+    def __init__(self, video_path: Path, audio_path: Path) -> None:
+        super().__init__(video_path)
+        self.audio_path = audio_path
+
+    def download_audio(self, source: SourceRef, settings: Settings, *, progress=None) -> DownloadResult:
+        return DownloadResult(
+            source=source,
+            video_path=None,
+            audio_path=self.audio_path,
+            title="demo-title",
+            webpage_url="https://www.bilibili.com/video/BV1xx411c7XD",
+            metadata={"title": "demo-title", "id": "BV1xx411c7XD", "media_type": "audio"},
+        )
+
+
 class FakeTranscriber(Transcriber):
     name = "fake-whisper"
 
@@ -33,6 +49,17 @@ class FakeTranscriber(Transcriber):
             "language": "zh",
             "model": "small",
         }
+
+
+class OriginalAudioTranscriber(FakeTranscriber):
+    accepts_original_audio = True
+
+    def __init__(self) -> None:
+        self.received_audio_path: Path | None = None
+
+    def transcribe(self, audio_path: Path, *, prompt: str | None = None, progress=None) -> dict[str, str]:
+        self.received_audio_path = audio_path
+        return super().transcribe(audio_path, prompt=prompt, progress=progress)
 
 
 class PipelineUnderTest(B2TPipeline):
@@ -60,6 +87,26 @@ def test_pipeline_transcribes_bilibili_source(tmp_path: Path) -> None:
     assert result.transcript_path.exists()
     assert result.metadata_path.exists()
     assert result.video_path == video_path
+
+
+def test_pipeline_keeps_original_downloaded_audio_for_cloud_transcriber(tmp_path: Path) -> None:
+    settings = Settings.from_workspace(tmp_path / ".b2t")
+    settings.ensure_directories()
+    video_path = tmp_path / "video.mp4"
+    video_path.write_bytes(b"video")
+    audio_path = tmp_path / "audio.m4a"
+    audio_path.write_bytes(b"audio")
+    transcriber = OriginalAudioTranscriber()
+
+    pipeline = PipelineUnderTest(
+        settings=settings,
+        downloader=FakeAudioDownloader(video_path, audio_path),
+        transcriber=transcriber,
+    )
+
+    pipeline.transcribe("BV1xx411c7XD")
+
+    assert transcriber.received_audio_path == audio_path
 
 
 def test_pipeline_markdown_contains_clickable_bilibili_source(tmp_path: Path) -> None:
