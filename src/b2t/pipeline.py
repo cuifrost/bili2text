@@ -86,7 +86,13 @@ class B2TPipeline:
             source_url = download_metadata.get("webpage_url")
         source_bv = source.bv
         if not source_bv and isinstance(download_metadata, dict):
-            source_bv = download_metadata.get("id")
+            source_bv = download_metadata.get("bv") or download_metadata.get("id")
+
+        video_metadata = dict(download_metadata) if isinstance(download_metadata, dict) else {}
+        video_metadata.setdefault("title", base_name)
+        video_metadata.setdefault("bv", source_bv)
+        video_metadata.setdefault("webpage_url", source_url)
+        video_metadata.setdefault("media_type", "local")
 
         metadata = {
             "source": {
@@ -102,6 +108,7 @@ class B2TPipeline:
             "downloaded_audio_path": str(downloaded.audio_path) if downloaded and downloaded.audio_path else None,
             "video_path": str(video_path) if video_path else None,
             "download": download_metadata or None,
+            "video": video_metadata,
             "language": transcription.get("language"),
             "generated_at": datetime.now().isoformat(),
         }
@@ -147,15 +154,26 @@ class B2TPipeline:
 
         download = metadata.get("download")
         download_data = download if isinstance(download, dict) else {}
-        title = str(download_data.get("title") or base_name)
+        video = metadata.get("video")
+        video_data = video if isinstance(video, dict) else download_data
+        title = _single_line(str(video_data.get("title") or base_name))
         source_data_raw = metadata.get("source", {})
         source_data = source_data_raw if isinstance(source_data_raw, dict) else {}
-        download_url = download_data.get("webpage_url")
+        download_url = video_data.get("webpage_url") or download_data.get("webpage_url")
         url = source_data.get("url") or download_url or ""
         url_text = str(url)
-        bv = str(source_data.get("bv") or download_data.get("id") or "")
+        bv = str(source_data.get("bv") or video_data.get("bv") or download_data.get("id") or "")
         safe_url = url_text.replace(")", "%29")
         source_link = f"[{bv or '打开视频'}]({safe_url})" if safe_url else "本地文件"
+        description = str(video_data.get("description") or "").strip()
+        uploader = str(video_data.get("uploader") or video_data.get("channel") or "")
+        uploader_id = str(video_data.get("uploader_id") or video_data.get("channel_id") or "")
+        upload_date = _format_upload_date(video_data.get("upload_date"))
+        published_at = _format_timestamp(video_data.get("timestamp"))
+        duration = video_data.get("duration_string") or _format_duration(video_data.get("duration"))
+        categories = _join_values(video_data.get("categories"))
+        tags = _join_values(video_data.get("tags"))
+        thumbnail = str(video_data.get("thumbnail") or "")
 
         lines = [
             "---",
@@ -166,6 +184,16 @@ class B2TPipeline:
             f"model: {json.dumps(str(metadata.get('model') or ''), ensure_ascii=False)}",
             f"language: {json.dumps(str(metadata.get('language') or ''), ensure_ascii=False)}",
             f"generated_at: {json.dumps(str(metadata.get('generated_at') or ''), ensure_ascii=False)}",
+            f"uploader: {json.dumps(uploader, ensure_ascii=False)}",
+            f"uploader_id: {json.dumps(uploader_id, ensure_ascii=False)}",
+            f"upload_date: {json.dumps(upload_date, ensure_ascii=False)}",
+            f"published_at: {json.dumps(published_at or '', ensure_ascii=False)}",
+            f"duration: {json.dumps(str(duration or ''), ensure_ascii=False)}",
+            f"view_count: {json.dumps(video_data.get('view_count'), ensure_ascii=False)}",
+            f"like_count: {json.dumps(video_data.get('like_count'), ensure_ascii=False)}",
+            f"comment_count: {json.dumps(video_data.get('comment_count'), ensure_ascii=False)}",
+            f"thumbnail: {json.dumps(thumbnail, ensure_ascii=False)}",
+            f"video_tags: {json.dumps(video_data.get('tags') or [], ensure_ascii=False)}",
             "tags:",
             "  - bili2text",
             "  - transcription",
@@ -176,15 +204,33 @@ class B2TPipeline:
             "> [!info] 转录信息",
             f"> - 视频源：{source_link}",
             f"> - BV 号：`{bv}`" if bv else "> - BV 号：无（本地文件）",
+            f"> - UP 主：{uploader or '未知'}" + (f" (`{uploader_id}`)" if uploader_id else ""),
+            f"> - 发布时间：{upload_date or published_at or '未知'}",
+            f"> - 时长：{duration or '未知'}",
+            f"> - 播放：{_format_number(video_data.get('view_count'))}",
+            f"> - 点赞：{_format_number(video_data.get('like_count'))}",
+            f"> - 评论：{_format_number(video_data.get('comment_count'))}",
             f"> - 引擎：{metadata.get('engine') or ''}",
             f"> - 模型：{metadata.get('model') or ''}",
             f"> - 语言：{metadata.get('language') or ''}",
+        ]
+        if thumbnail:
+            lines.append(f"> - 缩略图：[查看图片]({thumbnail.replace(')', '%29')})")
+        if categories:
+            lines.append(f"> - 分类：{categories}")
+        if tags:
+            lines.append(f"> - 标签：{tags}")
+        lines.extend([
+            "",
+            "## 视频简介",
+            "",
+            description or "暂无简介。",
             "",
             "## 转录文本",
             "",
             text.rstrip(),
             "",
-        ]
+        ])
         markdown_path.write_text("\n".join(lines), encoding="utf-8")
         return markdown_path
 
@@ -324,3 +370,45 @@ def _probe_media_duration_seconds(video_path: Path) -> float | None:
     except ValueError:
         return None
     return value if value > 0 else None
+
+
+def _single_line(value: str) -> str:
+    return " ".join(value.splitlines()).strip()
+
+
+def _format_upload_date(value: object) -> str | None:
+    if not isinstance(value, str) or len(value) != 8 or not value.isdigit():
+        return None
+    return f"{value[:4]}-{value[4:6]}-{value[6:]}"
+
+
+def _format_timestamp(value: object) -> str | None:
+    if not isinstance(value, (int, float)):
+        return None
+    try:
+        return datetime.fromtimestamp(value).astimezone().isoformat()
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+def _format_duration(value: object) -> str | None:
+    if not isinstance(value, (int, float)) or value < 0:
+        return None
+    total_seconds = int(value)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes}:{seconds:02d}"
+
+
+def _format_number(value: object) -> str:
+    if isinstance(value, (int, float)):
+        return f"{value:,}"
+    return str(value) if value not in (None, "") else "未知"
+
+
+def _join_values(value: object) -> str:
+    if isinstance(value, (list, tuple)):
+        return "、".join(str(item) for item in value if item not in (None, ""))
+    return str(value) if value not in (None, "") else ""

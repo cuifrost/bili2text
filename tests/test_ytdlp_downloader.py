@@ -1,5 +1,5 @@
 from b2t.config import Settings
-from b2t.downloaders.ytdlp import YtDlpDownloader
+from b2t.downloaders.ytdlp import YtDlpDownloader, _format_duration
 from b2t.models import SourceRef
 
 
@@ -141,3 +141,44 @@ def test_ytdlp_options_env_cookie_file_takes_priority(tmp_path, monkeypatch) -> 
     opts = YtDlpDownloader()._build_ydl_opts(source, settings)
 
     assert opts["cookiefile"] == str(env_cookie_file)
+
+
+def test_ytdlp_extract_metadata_keeps_video_information(tmp_path) -> None:
+    settings = Settings.from_workspace(tmp_path / ".b2t")
+    source = SourceRef(
+        raw_input="BV1xx411c7XD",
+        kind="bilibili",
+        display_name="BV1xx411c7XD",
+        bv="BV1xx411c7XD",
+        url="https://www.bilibili.com/video/BV1xx411c7XD",
+    )
+    info = {
+        "id": "BV1xx411c7XD",
+        "title": "完整标题",
+        "description": "视频简介",
+        "uploader": "测试 UP",
+        "uploader_id": "12345",
+        "channel": "测试频道",
+        "channel_id": "67890",
+        "thumbnail": "https://i0.hdslb.com/thumb.jpg",
+        "upload_date": "20260811",
+        "timestamp": 1786406400,
+        "duration": 125,
+        "duration_string": "2:05",
+        "view_count": 1200,
+        "like_count": 99,
+        "comment_count": 12,
+        "categories": ["知识"],
+        "tags": ["测试", "转录"],
+        "language": "zh",
+        "webpage_url": source.url,
+    }
+
+    metadata = YtDlpDownloader()._extract_metadata(info, source, media_type="audio")
+
+    assert metadata["description"] == "视频简介"
+    assert metadata["channel_id"] == "67890"
+    assert metadata["tags"] == ["测试", "转录"]
+    assert metadata["media_type"] == "audio"
+    assert metadata["bv"] == "BV1xx411c7XD"
+    assert _format_duration(125) == "2:05"

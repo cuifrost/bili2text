@@ -90,6 +90,8 @@ uv run bili2text tx "BV1kfDTBXEfu" --provider faster-whisper --model small
 
 `small` 是速度和中文识别质量的平衡选择。任务默认单路执行，避免多个模型同时抢占同一块显卡；如需调整并发数，可设置 `B2T_MAX_WORKERS`。
 
+每次从 Bilibili BV 号或链接开始转写时，程序只下载音频，并在工作区保存音频、纯文本和 JSON 元数据；如果配置了 Markdown 输出目录（默认是 `~/Documents/ObsidianDocumentFile/Atlas/00_Inbox`），还会生成一份可直接放进 Obsidian 的笔记。笔记会包含标题、简介、视频链接、BV 号、UP 主、发布时间、时长、播放/点赞/评论数、缩略图、分类、标签、转写引擎和完整转录正文。
+
 ### 阿里云百炼云端转写
 
 云服务器可以使用百炼异步文件转写，不需要本地 GPU。默认会把音频上传到百炼临时存储，再提交 `qwen3-asr-flash-filetrans` 任务，完成后下载结果；本地测试不需要购买或配置 OSS。长期部署仍可以切换到自有 OSS。

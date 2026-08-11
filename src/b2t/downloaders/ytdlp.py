@@ -65,13 +65,7 @@ class YtDlpDownloader(Downloader):
             video_path=video_path,
             title=info.get("title"),
             webpage_url=info.get("webpage_url") or source.url,
-            metadata={
-                "title": info.get("title"),
-                "uploader": info.get("uploader"),
-                "duration": info.get("duration"),
-                "id": info.get("id"),
-                "webpage_url": info.get("webpage_url") or source.url,
-            },
+            metadata=self._extract_metadata(info, source, media_type="video"),
         )
 
     def download_audio(
@@ -113,15 +107,49 @@ class YtDlpDownloader(Downloader):
             audio_path=audio_path,
             title=info.get("title"),
             webpage_url=webpage_url,
-            metadata={
-                "title": info.get("title"),
-                "uploader": info.get("uploader"),
-                "duration": info.get("duration"),
-                "id": info.get("id"),
-                "webpage_url": webpage_url,
-                "media_type": "audio",
-            },
+            metadata=self._extract_metadata(info, source, media_type="audio"),
         )
+
+    def _extract_metadata(
+        self,
+        info: dict[str, Any],
+        source: SourceRef,
+        *,
+        media_type: str,
+    ) -> dict[str, Any]:
+        """Keep stable, useful video fields instead of serializing yt-dlp's huge info dict."""
+        video_id = info.get("id") or source.bv
+        webpage_url = info.get("webpage_url") or info.get("original_url") or source.url
+        metadata: dict[str, Any] = {
+            "title": info.get("title"),
+            "description": info.get("description"),
+            "id": video_id,
+            "bv": video_id if isinstance(video_id, str) and video_id.startswith("BV") else source.bv,
+            "webpage_url": webpage_url,
+            "original_url": info.get("original_url") or source.url,
+            "uploader": info.get("uploader"),
+            "uploader_id": info.get("uploader_id"),
+            "uploader_url": info.get("uploader_url"),
+            "channel": info.get("channel") or info.get("uploader"),
+            "channel_id": info.get("channel_id") or info.get("uploader_id"),
+            "channel_url": info.get("channel_url") or info.get("uploader_url"),
+            "thumbnail": info.get("thumbnail"),
+            "upload_date": info.get("upload_date"),
+            "timestamp": info.get("timestamp"),
+            "release_timestamp": info.get("release_timestamp"),
+            "duration": info.get("duration"),
+            "duration_string": info.get("duration_string") or _format_duration(info.get("duration")),
+            "view_count": info.get("view_count"),
+            "like_count": info.get("like_count"),
+            "comment_count": info.get("comment_count"),
+            "categories": _as_list(info.get("categories")),
+            "tags": _as_list(info.get("tags")),
+            "language": info.get("language"),
+            "age_limit": info.get("age_limit"),
+            "availability": info.get("availability"),
+            "media_type": media_type,
+        }
+        return metadata
 
     def _build_ydl_opts(
         self,
@@ -203,3 +231,22 @@ def _build_progress_hook(progress):
             progress.running("downloading", message="download_finished", stage_progress=1.0)
 
     return progress_hook
+
+
+def _as_list(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    return [value]
+
+
+def _format_duration(value: Any) -> str | None:
+    if not isinstance(value, (int, float)) or value < 0:
+        return None
+    total_seconds = int(value)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes}:{seconds:02d}"

@@ -19,7 +19,23 @@ class FakeDownloader(Downloader):
             video_path=self.video_path,
             title="demo-title",
             webpage_url="https://www.bilibili.com/video/BV1xx411c7XD",
-            metadata={"title": "demo-title", "id": "BV1xx411c7XD"},
+            metadata={
+                "title": "demo-title",
+                "description": "这是视频简介。",
+                "id": "BV1xx411c7XD",
+                "bv": "BV1xx411c7XD",
+                "uploader": "demo-up",
+                "uploader_id": "demo-up-id",
+                "upload_date": "20260811",
+                "duration": 125,
+                "duration_string": "2:05",
+                "view_count": 1200,
+                "like_count": 99,
+                "comment_count": 12,
+                "categories": ["知识"],
+                "tags": ["测试", "转录"],
+                "thumbnail": "https://example.com/thumb.jpg",
+            },
         )
 
 
@@ -35,7 +51,24 @@ class FakeAudioDownloader(FakeDownloader):
             audio_path=self.audio_path,
             title="demo-title",
             webpage_url="https://www.bilibili.com/video/BV1xx411c7XD",
-            metadata={"title": "demo-title", "id": "BV1xx411c7XD", "media_type": "audio"},
+            metadata={
+                "title": "demo-title",
+                "description": "这是视频简介。",
+                "id": "BV1xx411c7XD",
+                "bv": "BV1xx411c7XD",
+                "uploader": "demo-up",
+                "uploader_id": "demo-up-id",
+                "upload_date": "20260811",
+                "duration": 125,
+                "duration_string": "2:05",
+                "view_count": 1200,
+                "like_count": 99,
+                "comment_count": 12,
+                "categories": ["知识"],
+                "tags": ["测试", "转录"],
+                "thumbnail": "https://example.com/thumb.jpg",
+                "media_type": "audio",
+            },
         )
 
 
@@ -128,6 +161,10 @@ def test_pipeline_markdown_contains_clickable_bilibili_source(tmp_path: Path) ->
 
     assert "[BV1xx411c7XD](https://www.bilibili.com/video/BV1xx411c7XD)" in content
     assert "bv: \"BV1xx411c7XD\"" in content
+    assert "这是视频简介。" in content
+    assert "UP 主：demo-up" in content
+    assert "播放：1,200" in content
+    assert "标签：测试、转录" in content
 
 
 def test_pipeline_respects_custom_output_file(tmp_path: Path) -> None:
