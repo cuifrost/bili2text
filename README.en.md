@@ -117,8 +117,10 @@ set -a; source bailian.env; set +a
 Then transcribe a video:
 
 ```bash
-uv run bili2text tx "BV1kfDTBXEfu" --provider bailian --model qwen3-asr-flash-filetrans
+uv run bili2text tx "BV1kfDTBXEfu" --provider bailian
 ```
+
+Pass `--model` only when you want to override the configured Bailian model; otherwise the command uses `qwen3-asr-flash-filetrans` automatically.
 
 Bailian file transcription requires a publicly reachable audio URL, so the OSS bucket cannot be represented only by a local path. bili2text generates a temporary signed URL. Never commit API keys or OSS secrets.
 

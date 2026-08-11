@@ -124,8 +124,10 @@ set -a; source bailian.env; set +a
 然后直接转写：
 
 ```bash
-uv run bili2text tx "BV1kfDTBXEfu" --provider bailian --model qwen3-asr-flash-filetrans
+uv run bili2text tx "BV1kfDTBXEfu" --provider bailian
 ```
+
+如果需要切换百炼模型，再额外传入 `--model`；不传时会自动使用 `qwen3-asr-flash-filetrans`。
 
 百炼文件转写要求音频 URL 可被公网访问，因此 OSS Bucket 不应只提供本地路径；程序会生成临时签名 URL。API Key 和 OSS 密钥不要提交到 Git 仓库。
 

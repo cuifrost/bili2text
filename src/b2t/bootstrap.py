@@ -243,6 +243,8 @@ def run_bootstrap(*, settings: Settings, interactive: bool = True) -> AppConfig:
         ).execute()
     if config.default_provider in {"whisper", "faster-whisper"} and selected_whisper_model:
         config.default_model = selected_whisper_model
+    elif config.default_provider == "bailian":
+        config.default_model = config.bailian.model_name
 
     # ── Save and show next steps ─────────────────────────────
     config.save(settings)

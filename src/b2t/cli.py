@@ -303,10 +303,13 @@ def _load_runtime(
         settings=settings,
         allow_prompt=allow_bootstrap and sys.stdin.isatty(),
     )
+    selected_provider = provider or config.default_provider
     if provider:
         config.default_provider = provider
     if model:
         config.default_model = model
+    elif selected_provider == "bailian":
+        config.default_model = config.bailian.model_name
     return settings, config
 
 
