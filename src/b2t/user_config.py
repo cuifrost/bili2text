@@ -40,6 +40,7 @@ class BailianConfig:
     workspace_id: str = ""
     region: str = "cn-beijing"
     model_name: str = "qwen3-asr-flash-filetrans"
+    storage_mode: str = "auto"
     oss_region: str = "cn-beijing"
     oss_bucket: str = ""
     oss_endpoint: str = ""

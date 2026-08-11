@@ -92,7 +92,7 @@ uv run bili2text tx "BV1kfDTBXEfu" --provider faster-whisper --model small
 
 ### 阿里云百炼云端转写
 
-云服务器可以使用百炼异步文件转写，不需要本地 GPU。程序会先把音频上传到 OSS，再提交 `qwen3-asr-flash-filetrans` 任务，完成后自动下载结果并删除临时音频。
+云服务器可以使用百炼异步文件转写，不需要本地 GPU。默认会把音频上传到百炼临时存储，再提交 `qwen3-asr-flash-filetrans` 任务，完成后下载结果；本地测试不需要购买或配置 OSS。长期部署仍可以切换到自有 OSS。
 
 安装依赖：
 
@@ -107,10 +107,7 @@ uv sync --extra bailian
 ```bash
 export DASHSCOPE_API_KEY="你的百炼 API Key"
 export DASHSCOPE_WORKSPACE_ID="你的 Workspace ID"
-export OSS_ACCESS_KEY_ID="你的 OSS AccessKey ID"
-export OSS_ACCESS_KEY_SECRET="你的 OSS AccessKey Secret"
-export OSS_BUCKET="你的 OSS Bucket"
-export OSS_REGION="cn-beijing"
+export B2T_BAILIAN_STORAGE="temporary"
 ```
 
 云服务器上可以把这些值放进一个只对当前用户可读的环境文件，然后一次性加载：
@@ -129,7 +126,7 @@ uv run bili2text tx "BV1kfDTBXEfu" --provider bailian
 
 如果需要切换百炼模型，再额外传入 `--model`；不传时会自动使用 `qwen3-asr-flash-filetrans`。
 
-百炼文件转写要求音频 URL 可被公网访问，因此 OSS Bucket 不应只提供本地路径；程序会生成临时签名 URL。API Key 和 OSS 密钥不要提交到 Git 仓库。
+临时上传模式适合本地测试和短期任务。如果要长期使用自己的存储，再设置 `B2T_BAILIAN_STORAGE=oss` 并补充 OSS 凭据。API Key 和 OSS 密钥不要提交到 Git 仓库。
 
 批量提交多条输入：
 

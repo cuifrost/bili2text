@@ -25,6 +25,7 @@ class BailianFileTranscriber(Transcriber):
         region: str = "cn-beijing",
         model_name: str = "qwen3-asr-flash-filetrans",
         language: str | None = "zh",
+        storage_mode: str = "auto",
         oss_region: str = "cn-beijing",
         oss_bucket: str = "",
         oss_endpoint: str = "",
@@ -46,6 +47,13 @@ class BailianFileTranscriber(Transcriber):
         self.region = _env_first("DASHSCOPE_REGION", region, "cn-beijing")
         self.model_name = _env_first("B2T_BAILIAN_MODEL", model_name, "qwen3-asr-flash-filetrans")
         self.language = language
+        self.storage_mode = _env_first("B2T_BAILIAN_STORAGE", storage_mode, "auto").lower()
+        if self.storage_mode not in {"auto", "temporary", "oss"}:
+            raise ValueError("B2T_BAILIAN_STORAGE must be auto, temporary, or oss")
+        self.temporary_upload_endpoint = _env_first(
+            "DASHSCOPE_UPLOAD_ENDPOINT",
+            "https://dashscope.aliyuncs.com/api/v1/uploads",
+        )
         self.oss_region = _env_first("OSS_REGION", oss_region, self.region)
         self.oss_bucket = _env_first("OSS_BUCKET", oss_bucket)
         self.oss_endpoint = _env_first("OSS_ENDPOINT", oss_endpoint)
@@ -72,6 +80,7 @@ class BailianFileTranscriber(Transcriber):
         self._validate_configuration()
         session = self._get_session()
         object_key: str | None = None
+        storage = "temporary"
 
         try:
             if progress is not None:
@@ -80,7 +89,7 @@ class BailianFileTranscriber(Transcriber):
                     message="uploading_audio",
                     indeterminate=True,
                 )
-            file_url, object_key = self._upload_audio(audio_path)
+            file_url, object_key, storage = self._upload_audio(audio_path, session)
 
             if progress is not None:
                 progress.running(
@@ -116,6 +125,7 @@ class BailianFileTranscriber(Transcriber):
                 "metadata": {
                     "task_id": task_id,
                     "oss_object_key": object_key,
+                    "storage": storage,
                     "provider": self.name,
                 },
             }
@@ -129,12 +139,13 @@ class BailianFileTranscriber(Transcriber):
             missing.append("DASHSCOPE_API_KEY")
         if not self.workspace_id:
             missing.append("DASHSCOPE_WORKSPACE_ID")
-        if not self.oss_bucket:
-            missing.append("OSS_BUCKET")
-        if not os.getenv("OSS_ACCESS_KEY_ID"):
-            missing.append("OSS_ACCESS_KEY_ID")
-        if not os.getenv("OSS_ACCESS_KEY_SECRET"):
-            missing.append("OSS_ACCESS_KEY_SECRET")
+        if self._uses_oss_storage():
+            if not self.oss_bucket:
+                missing.append("OSS_BUCKET")
+            if not os.getenv("OSS_ACCESS_KEY_ID"):
+                missing.append("OSS_ACCESS_KEY_ID")
+            if not os.getenv("OSS_ACCESS_KEY_SECRET"):
+                missing.append("OSS_ACCESS_KEY_SECRET")
         if missing:
             raise RuntimeError(
                 "Bailian file transcription is missing configuration: "
@@ -155,7 +166,16 @@ class BailianFileTranscriber(Transcriber):
         self._session = requests.Session()
         return self._session
 
-    def _upload_audio(self, audio_path: Path) -> tuple[str, str]:
+    def _uses_oss_storage(self) -> bool:
+        return self.storage_mode == "oss" or (self.storage_mode == "auto" and bool(self.oss_bucket))
+
+    def _upload_audio(self, audio_path: Path, session: Any) -> tuple[str, str | None, str]:
+        if self._uses_oss_storage():
+            file_url, object_key = self._upload_to_oss(audio_path)
+            return file_url, object_key, "oss"
+        return self._upload_to_temporary(audio_path, session), None, "bailian-temporary"
+
+    def _upload_to_oss(self, audio_path: Path) -> tuple[str, str]:
         try:
             import alibabacloud_oss_v2 as oss
         except ImportError as exc:
@@ -177,6 +197,66 @@ class BailianFileTranscriber(Transcriber):
             expires=timedelta(seconds=self.oss_url_expire_seconds),
         )
         return str(presigned.url), object_key
+
+    def _upload_to_temporary(self, audio_path: Path, session: Any) -> str:
+        policy_response = self._request(
+            session,
+            "get",
+            self.temporary_upload_endpoint,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            params={"action": "getPolicy", "model": self.model_name},
+            timeout=60,
+        )
+        policy_payload = _response_json(policy_response, "Bailian temporary upload policy request failed")
+        policy_data = policy_payload.get("data")
+        if not isinstance(policy_data, dict):
+            raise RuntimeError("Bailian temporary upload policy response has no data object")
+
+        required_fields = (
+            "upload_host",
+            "upload_dir",
+            "oss_access_key_id",
+            "signature",
+            "policy",
+            "x_oss_object_acl",
+            "x_oss_forbid_overwrite",
+        )
+        missing = [
+            field
+            for field in required_fields
+            if field not in policy_data or policy_data[field] is None or policy_data[field] == ""
+        ]
+        if missing:
+            raise RuntimeError(
+                "Bailian temporary upload policy is missing fields: " + ", ".join(missing)
+            )
+
+        file_name = audio_path.name
+        object_key = f"{str(policy_data['upload_dir']).rstrip('/')}/{file_name}"
+        with audio_path.open("rb") as file_handle:
+            response = self._request(
+                session,
+                "post",
+                str(policy_data["upload_host"]),
+                files={
+                    "OSSAccessKeyId": (None, str(policy_data["oss_access_key_id"])),
+                    "Signature": (None, str(policy_data["signature"])),
+                    "policy": (None, str(policy_data["policy"])),
+                    "x-oss-object-acl": (None, str(policy_data["x_oss_object_acl"])),
+                    "x-oss-forbid-overwrite": (None, str(policy_data["x_oss_forbid_overwrite"])),
+                    "key": (None, object_key),
+                    "success_action_status": (None, "200"),
+                    "file": (file_name, file_handle),
+                },
+                timeout=300,
+            )
+        if response.status_code < 200 or response.status_code >= 300:
+            detail = getattr(response, "text", "") or response.status_code
+            raise RuntimeError(f"Bailian temporary audio upload failed: {detail}")
+        return f"oss://{object_key}"
 
     def _get_oss_client(self, oss: Any) -> Any:
         if self._oss_client is not None:
@@ -210,15 +290,19 @@ class BailianFileTranscriber(Transcriber):
         if prompt:
             parameters["corpus"] = {"text": prompt}
 
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "X-DashScope-Async": "enable",
+        }
+        if file_url.startswith("oss://"):
+            headers["X-DashScope-OssResourceResolve"] = "enable"
+
         response = self._request(
             session,
             "post",
             self._api_url("/services/audio/asr/transcription"),
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-                "X-DashScope-Async": "enable",
-            },
+            headers=headers,
             json={
                 "model": self.model_name,
                 "input": {"file_url": file_url},

@@ -85,7 +85,7 @@ uv run bili2text tx "BV1kfDTBXEfu" --provider faster-whisper --model small
 
 ### Alibaba Bailian cloud transcription
 
-Cloud servers can use Bailian's asynchronous file transcription without a local GPU. bili2text uploads the audio to OSS, submits a `qwen3-asr-flash-filetrans` task, downloads the result, and removes the temporary audio object.
+Cloud servers can use Bailian's asynchronous file transcription without a local GPU. By default, bili2text uploads the audio to Bailian temporary storage, submits a `qwen3-asr-flash-filetrans` task, and downloads the result. You do not need to buy or configure OSS for local testing. An OSS mode remains available for long-term deployments.
 
 Install the optional dependencies:
 
@@ -100,10 +100,7 @@ Use `bailian.env.example` in the repository as a starting template.
 ```bash
 export DASHSCOPE_API_KEY="your Bailian API key"
 export DASHSCOPE_WORKSPACE_ID="your workspace ID"
-export OSS_ACCESS_KEY_ID="your OSS access key ID"
-export OSS_ACCESS_KEY_SECRET="your OSS access key secret"
-export OSS_BUCKET="your OSS bucket"
-export OSS_REGION="cn-beijing"
+export B2T_BAILIAN_STORAGE="temporary"
 ```
 
 On a cloud server, keep these values in a user-readable-only environment file and load them once per shell:
@@ -122,7 +119,7 @@ uv run bili2text tx "BV1kfDTBXEfu" --provider bailian
 
 Pass `--model` only when you want to override the configured Bailian model; otherwise the command uses `qwen3-asr-flash-filetrans` automatically.
 
-Bailian file transcription requires a publicly reachable audio URL, so the OSS bucket cannot be represented only by a local path. bili2text generates a temporary signed URL. Never commit API keys or OSS secrets.
+The temporary upload mode is intended for testing and short-lived jobs. Set `B2T_BAILIAN_STORAGE=oss` and provide OSS credentials only when you want your own long-term storage. Never commit API keys or OSS secrets.
 
 Submit multiple inputs in one batch:
 

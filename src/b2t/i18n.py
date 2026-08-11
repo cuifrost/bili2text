@@ -54,7 +54,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "doctor_faster_whisper": "faster-whisper",
         "doctor_sensevoice": "funasr-onnx",
         "doctor_requests": "requests",
-        "doctor_bailian": "bailian / OSS",
+        "doctor_bailian": "bailian / temporary upload",
         "status_ok": "可用",
         "status_missing": "缺失",
 
@@ -86,6 +86,9 @@ MESSAGES: dict[str, dict[str, str]] = {
         "bootstrap_bailian_workspace_prompt": "百炼 Workspace ID",
         "bootstrap_bailian_region_prompt": "百炼地域",
         "bootstrap_bailian_model_prompt": "百炼模型名称",
+        "bootstrap_bailian_storage_prompt": "百炼音频存储方式",
+        "bootstrap_bailian_storage_temporary": "使用百炼临时存储（无需 OSS，推荐本地测试）",
+        "bootstrap_bailian_storage_oss": "使用自己的 OSS Bucket（适合长期服务器部署）",
         "bootstrap_bailian_oss_region_prompt": "OSS 地域",
         "bootstrap_bailian_oss_bucket_prompt": "OSS Bucket 名称",
         "bootstrap_bailian_oss_endpoint_prompt": "OSS Endpoint（可留空）",
@@ -139,7 +142,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "provider_volcengine_name": "火山引擎云端识别",
         "provider_volcengine_desc": "商用云端语音识别，适合服务化部署。需要配置火山引擎凭据。",
         "provider_bailian_name": "阿里云百炼文件转写",
-        "provider_bailian_desc": "把音频上传到 OSS 后调用百炼异步 ASR，适合长视频和低配置云服务器。需要百炼与 OSS 凭据。",
+        "provider_bailian_desc": "默认使用百炼临时存储进行异步 ASR，无需购买 OSS；适合长视频和低配置云服务器。",
 
         # ── Language ─────────────────────────────────────────
         "language_updated": "语言已切换为: {language}",
@@ -264,7 +267,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "doctor_faster_whisper": "faster-whisper",
         "doctor_sensevoice": "funasr-onnx",
         "doctor_requests": "requests",
-        "doctor_bailian": "bailian / OSS",
+        "doctor_bailian": "bailian / temporary upload",
         "status_ok": "ok",
         "status_missing": "missing",
 
@@ -296,6 +299,9 @@ MESSAGES: dict[str, dict[str, str]] = {
         "bootstrap_bailian_workspace_prompt": "Bailian workspace ID",
         "bootstrap_bailian_region_prompt": "Bailian region",
         "bootstrap_bailian_model_prompt": "Bailian model name",
+        "bootstrap_bailian_storage_prompt": "Bailian audio storage mode",
+        "bootstrap_bailian_storage_temporary": "Bailian temporary storage (no OSS, recommended for local tests)",
+        "bootstrap_bailian_storage_oss": "Your own OSS bucket (for long-term server deployment)",
         "bootstrap_bailian_oss_region_prompt": "OSS region",
         "bootstrap_bailian_oss_bucket_prompt": "OSS bucket name",
         "bootstrap_bailian_oss_endpoint_prompt": "OSS endpoint (optional)",
@@ -349,7 +355,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "provider_volcengine_name": "Volcengine (cloud)",
         "provider_volcengine_desc": "Commercial cloud-based speech recognition. Good for service deployments. Requires Volcengine credentials.",
         "provider_bailian_name": "Alibaba Bailian file transcription",
-        "provider_bailian_desc": "Upload audio to OSS, then use Bailian async ASR for long videos and low-resource cloud servers. Requires Bailian and OSS credentials.",
+        "provider_bailian_desc": "Use Bailian temporary storage by default for async ASR, so you do not need to buy OSS. Suitable for long videos and low-resource cloud servers.",
 
         # ── Language ─────────────────────────────────────────
         "language_updated": "Language switched to: {language}",

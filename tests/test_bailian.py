@@ -56,6 +56,26 @@ class FakeSession:
         )
 
 
+class FakeTemporarySession(FakeSession):
+    def get(self, url: str, **kwargs: Any) -> FakeResponse:
+        if url.endswith("/uploads"):
+            self.get_calls.append({"url": url, **kwargs})
+            return FakeResponse(
+                {
+                    "data": {
+                        "upload_host": "https://upload.example/temporary",
+                        "upload_dir": "dashscope-instant/test",
+                        "oss_access_key_id": "temporary-access-key",
+                        "signature": "temporary-signature",
+                        "policy": "temporary-policy",
+                        "x_oss_object_acl": "default",
+                        "x_oss_forbid_overwrite": "true",
+                    }
+                }
+            )
+        return super().get(url, **kwargs)
+
+
 class FakeUploader:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
@@ -167,7 +187,32 @@ def test_bailian_filetrans_supports_results_list_and_env_tuning(tmp_path, monkey
     assert session.post_calls[0]["json"]["parameters"]["enable_words"] is False
 
 
-def test_bailian_filetrans_requires_cloud_and_oss_configuration(tmp_path) -> None:
+def test_bailian_filetrans_uses_bailian_temporary_storage_without_oss(tmp_path) -> None:
+    audio_path = tmp_path / "sample.m4a"
+    audio_path.write_bytes(b"audio")
+    session = FakeTemporarySession()
+    transcriber = BailianFileTranscriber(
+        api_key="dashscope-key",
+        workspace_id="workspace-123",
+        storage_mode="temporary",
+        session=session,
+        sleep_fn=lambda _seconds: None,
+    )
+
+    result = transcriber.transcribe(audio_path)
+
+    assert result["text"]
+    assert result["metadata"]["storage"] == "bailian-temporary"
+    assert session.get_calls[0]["params"] == {
+        "action": "getPolicy",
+        "model": "qwen3-asr-flash-filetrans",
+    }
+    assert session.post_calls[0]["url"] == "https://upload.example/temporary"
+    assert session.post_calls[1]["json"]["input"]["file_url"].startswith("oss://dashscope-instant/")
+    assert session.post_calls[1]["headers"]["X-DashScope-OssResourceResolve"] == "enable"
+
+
+def test_bailian_filetrans_requires_bailian_configuration(tmp_path) -> None:
     audio_path = tmp_path / "sample.wav"
     audio_path.write_bytes(b"audio")
 
@@ -181,4 +226,4 @@ def test_bailian_filetrans_requires_cloud_and_oss_configuration(tmp_path) -> Non
         raise AssertionError("expected missing configuration error")
 
     assert "DASHSCOPE_API_KEY" in message
-    assert "OSS_BUCKET" in message
+    assert "DASHSCOPE_WORKSPACE_ID" in message

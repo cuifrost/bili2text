@@ -357,22 +357,34 @@ def _configure_bailian(config: AppConfig, lang: str) -> None:
         message=tr(lang, "bootstrap_bailian_model_prompt"),
         default=bailian.model_name or "qwen3-asr-flash-filetrans",
     ).execute().strip()
-    bailian.oss_region = inquirer.text(
-        message=tr(lang, "bootstrap_bailian_oss_region_prompt"),
-        default=bailian.oss_region or os.getenv("OSS_REGION", bailian.region),
-    ).execute().strip()
-    bailian.oss_bucket = inquirer.text(
-        message=tr(lang, "bootstrap_bailian_oss_bucket_prompt"),
-        default=bailian.oss_bucket or os.getenv("OSS_BUCKET", ""),
-    ).execute().strip()
-    bailian.oss_endpoint = inquirer.text(
-        message=tr(lang, "bootstrap_bailian_oss_endpoint_prompt"),
-        default=bailian.oss_endpoint or os.getenv("OSS_ENDPOINT", ""),
-    ).execute().strip()
-    bailian.oss_prefix = inquirer.text(
-        message=tr(lang, "bootstrap_bailian_oss_prefix_prompt"),
-        default=bailian.oss_prefix or "bili2text/audio",
-    ).execute().strip()
+    default_storage_mode = bailian.storage_mode
+    if default_storage_mode == "auto":
+        default_storage_mode = "oss" if bailian.oss_bucket or os.getenv("OSS_BUCKET") else "temporary"
+    bailian.storage_mode = inquirer.select(
+        message=tr(lang, "bootstrap_bailian_storage_prompt"),
+        choices=[
+            {"name": tr(lang, "bootstrap_bailian_storage_temporary"), "value": "temporary"},
+            {"name": tr(lang, "bootstrap_bailian_storage_oss"), "value": "oss"},
+        ],
+        default=default_storage_mode,
+    ).execute()
+    if bailian.storage_mode == "oss":
+        bailian.oss_region = inquirer.text(
+            message=tr(lang, "bootstrap_bailian_oss_region_prompt"),
+            default=bailian.oss_region or os.getenv("OSS_REGION", bailian.region),
+        ).execute().strip()
+        bailian.oss_bucket = inquirer.text(
+            message=tr(lang, "bootstrap_bailian_oss_bucket_prompt"),
+            default=bailian.oss_bucket or os.getenv("OSS_BUCKET", ""),
+        ).execute().strip()
+        bailian.oss_endpoint = inquirer.text(
+            message=tr(lang, "bootstrap_bailian_oss_endpoint_prompt"),
+            default=bailian.oss_endpoint or os.getenv("OSS_ENDPOINT", ""),
+        ).execute().strip()
+        bailian.oss_prefix = inquirer.text(
+            message=tr(lang, "bootstrap_bailian_oss_prefix_prompt"),
+            default=bailian.oss_prefix or "bili2text/audio",
+        ).execute().strip()
 
 
 def _show_next_steps(

@@ -60,6 +60,7 @@ def build_pipeline(
             region=config.bailian.region,
             model_name=selected_model or config.bailian.model_name,
             language=config.language,
+            storage_mode=config.bailian.storage_mode,
             oss_region=config.bailian.oss_region,
             oss_bucket=config.bailian.oss_bucket,
             oss_endpoint=config.bailian.oss_endpoint,
