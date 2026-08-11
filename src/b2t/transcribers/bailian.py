@@ -24,6 +24,7 @@ class BailianFileTranscriber(Transcriber):
         workspace_id: str = "",
         region: str = "cn-beijing",
         model_name: str = "qwen3-asr-flash-filetrans",
+        api_base_url: str = "https://dashscope.aliyuncs.com/api/v1",
         language: str | None = "zh",
         storage_mode: str = "auto",
         oss_region: str = "cn-beijing",
@@ -46,6 +47,11 @@ class BailianFileTranscriber(Transcriber):
         self.workspace_id = _env_first("DASHSCOPE_WORKSPACE_ID", workspace_id)
         self.region = _env_first("DASHSCOPE_REGION", region, "cn-beijing")
         self.model_name = _env_first("B2T_BAILIAN_MODEL", model_name, "qwen3-asr-flash-filetrans")
+        self.api_base_url = _env_first(
+            "DASHSCOPE_API_BASE",
+            api_base_url,
+            "https://dashscope.aliyuncs.com/api/v1",
+        ).rstrip("/")
         self.language = language
         self.storage_mode = _env_first("B2T_BAILIAN_STORAGE", storage_mode, "auto").lower()
         if self.storage_mode not in {"auto", "temporary", "oss"}:
@@ -371,8 +377,7 @@ class BailianFileTranscriber(Transcriber):
         raise RuntimeError("Bailian request failed without a response")
 
     def _api_url(self, suffix: str) -> str:
-        host = f"{self.workspace_id}.{self.region}.maas.aliyuncs.com"
-        return f"https://{host}/api/v1{suffix}"
+        return f"{self.api_base_url}{suffix}"
 
 
 def _response_json(response: Any, message: str) -> dict[str, Any]:

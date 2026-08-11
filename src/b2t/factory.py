@@ -59,6 +59,7 @@ def build_pipeline(
             workspace_id=config.bailian.workspace_id,
             region=config.bailian.region,
             model_name=selected_model or config.bailian.model_name,
+            api_base_url=config.bailian.api_base_url,
             language=config.language,
             storage_mode=config.bailian.storage_mode,
             oss_region=config.bailian.oss_region,
