@@ -9,7 +9,7 @@ from b2t.bootstrap import (
     sync_selected_environment,
     uv_available,
 )
-from b2t.config import Settings
+from b2t.config import Settings, _default_workspace_root
 from b2t.user_config import AppConfig
 
 
@@ -38,6 +38,27 @@ def test_build_uv_sync_command_is_stable() -> None:
 def test_uv_available_uses_path_lookup() -> None:
     assert uv_available(lambda _name: "C:/bin/uv.exe") is True
     assert uv_available(lambda _name: None) is False
+
+
+def test_default_workspace_reuses_existing_runtime_workspace(tmp_path: Path, monkeypatch) -> None:
+    runtime_workspace = tmp_path / "runtime-workspace"
+    runtime_workspace.mkdir()
+    (runtime_workspace / "config.json").write_text("{}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("B2T_HOME", raising=False)
+
+    assert _default_workspace_root() == runtime_workspace
+
+
+def test_explicit_home_overrides_local_workspace_discovery(tmp_path: Path, monkeypatch) -> None:
+    configured = tmp_path / "configured"
+    runtime_workspace = tmp_path / "runtime-workspace"
+    runtime_workspace.mkdir()
+    (runtime_workspace / "config.json").write_text("{}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("B2T_HOME", str(configured))
+
+    assert _default_workspace_root() == configured
 
 
 def test_sync_selected_environment_reports_missing_uv(tmp_path: Path) -> None:

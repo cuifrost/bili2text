@@ -6,6 +6,22 @@ from pathlib import Path
 
 
 DEFAULT_WORKSPACE_NAME = ".b2t"
+LEGACY_WORKSPACE_NAME = "runtime-workspace"
+
+
+def _default_workspace_root() -> Path:
+    """Resolve one stable default while reusing older project-local workspaces."""
+    configured = os.getenv("B2T_HOME")
+    if configured:
+        return Path(configured).expanduser()
+
+    current_directory = Path.cwd()
+    for name in (DEFAULT_WORKSPACE_NAME, LEGACY_WORKSPACE_NAME):
+        candidate = current_directory / name
+        if (candidate / "config.json").exists():
+            return candidate
+
+    return Path.home() / DEFAULT_WORKSPACE_NAME
 
 
 @dataclass(slots=True)
@@ -24,7 +40,7 @@ class Settings:
 
     @classmethod
     def from_workspace(cls, workspace: Path | None = None) -> "Settings":
-        root = workspace or Path(os.getenv("B2T_HOME", DEFAULT_WORKSPACE_NAME)).expanduser()
+        root = workspace.expanduser() if workspace is not None else _default_workspace_root()
         return cls(
             workspace_root=root,
             downloads_dir=root / "downloads",
